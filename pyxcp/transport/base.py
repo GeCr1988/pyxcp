@@ -117,27 +117,37 @@ class BaseTransport(metaclass = abc.ABCMeta):
 
     def processResponse(self, response, length, counter):
         timestamp = time.perf_counter()
-        self.logger.debug(
-            "<- {:.3f}ms L{} C{} TS{} {}\n".format(
-                (timestamp - self.prev_response) * 1000,
-                length,
-                counter,
-                struct.unpack('<I', response[4:8]),
-                hexDump(response),
-            )
-        )
-        self.prev_response = timestamp
         self.counterReceived = counter
         xcpPDU = response
         if len(response) != length:
             raise types.FrameSizeError("Size mismatch.")
         pid = xcpPDU[0]
-        if pid >= 0xfe:
-            self.resQueue.put(xcpPDU)
-        elif pid == 0xfd:
-            self.evQueue.put(xcpPDU)
-        elif pid == 0xfc:
-            self.servQueue.put(xcpPDU)
+        if pid >= 0xFC:
+            self.logger.debug(
+                "<- {:.3f}ms L{} C{} TS{} {}\n".format(
+                    (timestamp - self.prev_response) * 1000,
+                    length,
+                    counter,
+                    struct.unpack('<I', response[4:8]),
+                    hexDump(response),
+                )
+            )
+            if pid >= 0xfe:
+                self.resQueue.put(xcpPDU)
+            elif pid == 0xfd:
+                self.evQueue.put(xcpPDU)
+            elif pid == 0xfc:
+                self.servQueue.put(xcpPDU)
         else:
+            self.logger.debug(
+                "<- {:.3f}ms L{} C{} TS{} {}\n".format(
+                    (timestamp - self.prev_response) * 1000,
+                    length,
+                    counter,
+                    struct.unpack('<I', response[4:8]),
+                    hexDump(response),
+                )
+            )
             self.daqQueue.put(xcpPDU)
+        self.prev_response = timestamp
 
