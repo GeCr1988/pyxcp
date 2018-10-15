@@ -57,6 +57,7 @@ class BaseTransport(metaclass = abc.ABCMeta):
             args=(),
             kwargs={},
         )
+        self.prev_response = time.perf_counter()
 
     def __del__(self):
         self.finishListener()
@@ -115,7 +116,16 @@ class BaseTransport(metaclass = abc.ABCMeta):
         pass
 
     def processResponse(self, response, length, counter):
-        self.logger.debug("<- {}\n".format(hexDump(response)))
+        timestamp = time.perf_counter()
+        self.logger.debug(
+            "<- {:.3f}ms L{} C{} {}\n".format(
+                (self.prev_response - timestamp) * 1000,
+                length,
+                counter,
+                hexDump(response),
+            )
+        )
+        self.prev_response = timestamp
         self.counterReceived = counter
         xcpPDU = response
         if len(response) != length:
