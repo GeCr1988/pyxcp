@@ -124,11 +124,10 @@ class BaseTransport(metaclass = abc.ABCMeta):
         pid = xcpPDU[0]
         if pid >= 0xFC:
             self.logger.debug(
-                "<- {:.3f}ms L{} C{} TS{} {}\n".format(
+                "<- {:.3f}ms L{} C{} {}\n".format(
                     (timestamp - self.prev_response) * 1000,
                     length,
                     counter,
-                    struct.unpack('<I', response[4:8]),
                     hexDump(response),
                 )
             )
@@ -140,11 +139,12 @@ class BaseTransport(metaclass = abc.ABCMeta):
                 self.servQueue.put(xcpPDU)
         else:
             self.logger.debug(
-                "<- {:.3f}ms L{} C{} TS{} {}\n".format(
+                "<- {:.3f}ms L{} C{} TS{} CLK{} {}\n".format(
                     (timestamp - self.prev_response) * 1000,
                     length,
                     counter,
                     struct.unpack('<I', response[4:8]),
+                    struct.unpack('<I', response[8:12]),
                     hexDump(response),
                 )
             )
