@@ -118,10 +118,11 @@ class BaseTransport(metaclass = abc.ABCMeta):
     def processResponse(self, response, length, counter):
         timestamp = time.perf_counter()
         self.logger.debug(
-            "<- {:.3f}ms L{} C{} {}\n".format(
-                (self.prev_response - timestamp) * 1000,
+            "<- {:.3f}ms L{} C{} TS{} {}\n".format(
+                (timestamp - self.prev_response) * 1000,
                 length,
                 counter,
+                struct.unpack('<I', response[4:8]),
                 hexDump(response),
             )
         )
