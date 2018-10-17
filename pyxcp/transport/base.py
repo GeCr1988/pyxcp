@@ -31,6 +31,7 @@ import threading
 
 from ..logger import Logger
 from ..utils import hexDump, PYTHON_VERSION
+from collections import deque
 
 import pyxcp.types as types
 from pyxcp.config import Config
@@ -49,7 +50,7 @@ class BaseTransport(metaclass = abc.ABCMeta):
         self.counterReceived = 0
         self.timing = Timing()
         self.resQueue = queue.Queue()
-        self.daqQueue = queue.Queue()
+        self.daqQueue = deque()
         self.evQueue = queue.Queue()
         self.servQueue = queue.Queue()
         self.listener = threading.Thread(
@@ -116,13 +117,14 @@ class BaseTransport(metaclass = abc.ABCMeta):
         pass
 
     def processResponse(self, response, length, counter):
-        timestamp = time.perf_counter()
+
         self.counterReceived = counter
         xcpPDU = response
         if len(response) != length:
             raise types.FrameSizeError("Size mismatch.")
         pid = xcpPDU[0]
         if pid >= 0xFC:
+            timestamp = time.perf_counter()
             self.logger.debug(
                 "<- {:.3f}ms L{} C{} {}\n".format(
                     (timestamp - self.prev_response) * 1000,
@@ -138,16 +140,18 @@ class BaseTransport(metaclass = abc.ABCMeta):
             elif pid == 0xfc:
                 self.servQueue.put(xcpPDU)
         else:
-            self.logger.debug(
-                "<- {:.3f}ms L{} C{} TS{} CLK{} {}\n".format(
-                    (timestamp - self.prev_response) * 1000,
-                    length,
-                    counter,
-                    struct.unpack('<I', response[4:8]),
-                    struct.unpack('<I', response[8:12]),
-                    hexDump(response),
+            if False:
+                timestamp = time.perf_counter()
+                self.logger.debug(
+                    "<- {:.3f}ms L{} C{} TS{} CLK{} {}\n".format(
+                        (timestamp - self.prev_response) * 1000,
+                        length,
+                        counter,
+                        struct.unpack('<I', response[4:8]),
+                        struct.unpack('<I', response[8:12]),
+                        hexDump(response),
+                    )
                 )
-            )
-            self.daqQueue.put(xcpPDU)
-        self.prev_response = timestamp
+                self.prev_response = timestamp
+            self.daqQueue.append((xcpPDU, counter, length))
 
